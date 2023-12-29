@@ -169,11 +169,6 @@ public:
     ulong sizeOfHeapCommit;
     uint loaderFlags;
     uint numDataDirectories;
-    DataDirectory exportTable;
-    DataDirectory importTable;
-    DataDirectory resourceTable;
-    DataDirectory exceptionTable;
-    DataDirectory[] dataDirectories;
 }
 
 public struct DataDirectory

@@ -1,0 +1,9 @@
+{
+	"authors": [
+		"cet"
+	],
+	"copyright": "Copyright © 2023, cet",
+	"description": "PE and ELF executable header format support :3",
+	"license": "MPL-2.0",
+	"name": "head"
+}

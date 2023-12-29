@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/head
+head.so
+head.dylib
+head.dll
+head.a
+head.lib
+head-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst

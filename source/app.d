@@ -2,6 +2,7 @@ import std.stdio;
 import godwit.stream;
 import godwit.formats;
 import godwit.encryption;
+import std.datetime;
 
 void main()
 {
@@ -41,10 +42,9 @@ void main()
 	writeln("DBYTES: ", (cast(ubyte*)&f)[0..4]);
 	writeln("NBYTES: ", (cast(ubyte*)&val)[0..4]);
 
-	Stream stream = new Stream(r"C:\Users\stake\Downloads\Web_Razer_Synapse_Installer_v2.21.24.41.exe");
-	import std.datetime;
+	Stream stream = new Stream(r"C:\Users\stake\Downloads\supersecret.txt");
 	auto start = Clock.currTime();
-	stream.encrypt("uw3PxqbG4pjbKwPhwR0eSI3huFhhg04B");
+	stream.decrypt("sNMuh9kXFkpSAMOQZpMkiqAXVXXPF4GB");
 	auto end = Clock.currTime();
 	stream.flush();
 	writeln("Encryption time:", (end - start).split!("msecs").msecs, "ms");

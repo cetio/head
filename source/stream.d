@@ -4,6 +4,7 @@ import std.file;
 import std.conv;
 import std.algorithm.mutation;
 import std.traits;
+import godwit.encryption;
 
 public enum Endianness : ubyte
 {
@@ -17,77 +18,6 @@ public enum Seek
     Start,
     Current,
     End
-}
-
-static @nogc void bencrypt(ubyte* ptr, int length, string key)
-{
-    if (key.length == 0)
-        return; // Enforce a minimum key length
-
-    foreach (int i; 0..length)
-    {
-        ptr[i] ^= (cast(ubyte)(key[(i + 3) % key.length]) << 3) | (cast(ubyte)(key[(i + 2) % key.length]) >> 5);
-        ptr[i] += cast(ubyte)((i + 1) * 0x7F);
-        ptr[i] ^= getPrime(i + 1) ^ key[(i + 1) % key.length];
-        ptr[i] ^= 0xAB;
-        ptr[i] ^= (cast(ubyte)(key[(i + 5) % key.length]) << 2) | (cast(ubyte)(key[(i + 4) % key.length]) >> 6);
-    }
-}
-
-static @nogc void bdecrypt(ubyte* ptr, int length, string key)
-{
-    if (key.length == 0)
-        return;
-
-    foreach (int i; 0..length)
-    {
-        ptr[i] ^= (cast(ubyte)(key[(i + 5) % key.length]) << 2) | (cast(ubyte)(key[(i + 4) % key.length]) >> 6);
-        ptr[i] ^= 0xAB;
-        ptr[i] ^= getPrime(i + 1) ^ key[(i + 1) % key.length];
-        ptr[i] -= cast(ubyte)((i + 1) * 0x7F);
-        ptr[i] ^= (cast(ubyte)(key[(i + 3) % key.length]) << 3) | (cast(ubyte)(key[(i + 2) % key.length]) >> 5);
-    }
-}
-
-static @nogc T bencrypt(T)(T val, string key)
-{
-    bencrypt(cast(ubyte*)&val, T.sizeof, key);
-    return val;
-}
-
-static @nogc T bdecrypt(T)(T val, string key)
-{
-    bdecrypt(cast(ubyte*)&val, T.sizeof, key);
-    return val;
-}
-
-private @nogc int getPrime(int n)
-{
-    if (n < 2)
-        return 2;
-
-    int count = 1;
-    int num = 3;
-
-    while (count < n)
-    {
-        bool isPrime = true;
-        for (int i = 2; i * i <= num; i++)
-        {
-            if (num % i == 0)
-            {
-                isPrime = false;
-                break;
-            }
-        }
-
-        if (isPrime)
-            count++;
-
-        num += 2;
-    }
-
-    return num - 2;
 }
 
 /**
@@ -161,24 +91,24 @@ public:
         this.filePath = filePath;
     }
 
-    @nogc bool mayRead()(int size = 1)
+    bool mayRead()(int size = 1)
     {
         return position + size - 1 < data.length;
     }
 
-    @nogc bool mayRead(T)()
+    bool mayRead(T)()
     {
         return position + T.sizeof - 1 < data.length;
     }
 
-    @nogc void encrypt(string key)
+    void encrypt(string key)
     {
-        bencrypt(cast(ubyte*)&data[0], cast(int)data.length, key);
+        btencryp(cast(ubyte*)&data[0], cast(int)data.length, key);
     }
 
-    @nogc void decrypt(string key)
+    void decrypt(string key)
     {
-        bdecrypt(cast(ubyte*)&data[0], cast(int)data.length, key);
+        btdecryp(cast(ubyte*)&data[0], cast(int)data.length, key);
     }
 
     /**
@@ -187,7 +117,7 @@ public:
     * Params:
     *     T = The size of type to move the position by.
     */
-    @nogc void step(T)()
+    void step(T)()
     {
         position += T.sizeof;
     }
@@ -199,7 +129,7 @@ public:
     *     T = The size of type to move the position by.
     *     count = The number of elements.
     */
-    @nogc void step(T)(int count)
+    void step(T)(int count)
     {
         position += T.sizeof * count;
     }
@@ -212,7 +142,7 @@ public:
     *     T = The offset value for seeking.
     *     SEEK = The direction of the seek operation (Start, Current, or End).
     */
-    @nogc void seek(T, Seek SEEK)()
+    void seek(T, Seek SEEK)()
         if (isIntegral!T)
     {
         static if (SEEK == Seek.Start)
@@ -238,7 +168,7 @@ public:
     * Returns:
     *   The value read from the stream.
     */
-    @nogc T read(T)()
+    T read(T)()
         if (!isArray!T)
     {
         if (data.length <= position)
@@ -246,7 +176,7 @@ public:
 
         scope(exit) step!T;
         T val = *cast(T*)(&data[position]);
-        return bdecrypt!T(makeEndian!T(val, endianness), key);
+        return btdecryp!T(makeEndian!T(val, endianness), key);
     }
 
     /**
@@ -258,14 +188,14 @@ public:
     * Returns:
     *   The value peeked from the stream.
     */
-    @nogc T peek(T)()
+    T peek(T)()
         if (!isArray!T)
     {
         if (data.length <= position)
             return T.init;
 
         T val = *cast(T*)(&data[position]);
-        return bdecrypt!T(makeEndian!T(val, endianness), key);
+        return btdecryp!T(makeEndian!T(val, endianness), key);
     }
 
     /**
@@ -310,13 +240,13 @@ public:
     *     T = The type of data to be written.
     *     val = The value to be written to the stream.
     */
-    @nogc void write(T)(T val)
+    void write(T)(T val)
     {
         if (data.length <= position)
             return;
 
         scope(exit) step!T;
-        *cast(T*)(&data[position]) = bencrypt!T(makeEndian!T(val, endianness), key);
+        *cast(T*)(&data[position]) = btencryp!T(makeEndian!T(val, endianness), key);
     }
 
     /**
@@ -326,12 +256,12 @@ public:
     *     T = The type of data to be written.
     *     val = The value to be written to the stream.
     */
-    @nogc void put(T)(T val)
+    void put(T)(T val)
     {
         if (data.length <= position)
             return;
 
-        *cast(T*)(&data[position]) = bencrypt!T(makeEndian!T(val, endianness), key);
+        *cast(T*)(&data[position]) = btencryp!T(makeEndian!T(val, endianness), key);
     }
 
     /**
@@ -376,7 +306,7 @@ public:
     *     T = The type of data to be written.
     *     items = An array of values to be written to the stream.
     */
-    @nogc void write(T, bool NOPREFIX = false)(T[] items)
+    void write(T, bool NOPREFIX = false)(T[] items)
     {
         static if (!NOPREFIX)
             write7EncodedInt(cast(int)items.length);
@@ -393,7 +323,7 @@ public:
     *     T = The type of data to be written.
     *     items = An array of values to be written to the stream.
     */
-    @nogc void put(T, bool NOPREFIX = false)(T[] items)
+    void put(T, bool NOPREFIX = false)(T[] items)
     {
         ulong _position = position;
         scope(exit) position = _position;
@@ -484,7 +414,7 @@ public:
     * Returns:
     *   The integer value read from the stream.
     */
-    @nogc int read7EncodedInt()
+    int read7EncodedInt()
     {
         int result = 0;
         int shift = 0;
@@ -507,7 +437,7 @@ public:
     * Params:
     *     val = The integer value to be written to the stream.
     */
-    @nogc void write7EncodedInt(int val)
+    void write7EncodedInt(int val)
     {
         foreach (int i; 0..5)
         {

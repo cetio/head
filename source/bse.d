@@ -1,11 +1,7 @@
-module godwit.encryption;
+module bse;
 
 import std.traits;
 import std.parallelism;
-import std.range;
-import std.algorithm;
-import std.bitmanip;
-import core.simd;
 
 public:
 static:

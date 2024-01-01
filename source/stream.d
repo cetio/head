@@ -4,7 +4,7 @@ import std.file;
 import std.conv;
 import std.algorithm.mutation;
 import std.traits;
-import godwit.encryption;
+import godwit.bse;
 
 public enum Endianness : ubyte
 {

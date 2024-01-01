@@ -56,9 +56,9 @@ private static @nogc T makeEndian(T)(T val, Endianness endianness)
 template ElementType(T) 
 {
     static if (is(T == U[], U))
-        alias ElementType!U ElementType;
+        alias ElementType = ElementType!U;
     else
-        alias T ElementType;
+        alias ElementType = T;
 }
 
 public class Stream
@@ -103,12 +103,12 @@ public:
 
     void encrypt(string key)
     {
-        btencryp(cast(ubyte*)&data[0], cast(int)data.length, key);
+        bse256_encrypt(cast(ubyte*)&data[0], cast(int)data.length, key);
     }
 
     void decrypt(string key)
     {
-        btdecryp(cast(ubyte*)&data[0], cast(int)data.length, key);
+        bse256_decrypt(cast(ubyte*)&data[0], cast(int)data.length, key);
     }
 
     /**
@@ -176,7 +176,7 @@ public:
 
         scope(exit) step!T;
         T val = *cast(T*)(&data[position]);
-        return btdecryp!T(makeEndian!T(val, endianness), key);
+        return bse_decrypt!T(makeEndian!T(val, endianness), key);
     }
 
     /**
@@ -195,7 +195,7 @@ public:
             return T.init;
 
         T val = *cast(T*)(&data[position]);
-        return btdecryp!T(makeEndian!T(val, endianness), key);
+        return bse_decrypt!T(makeEndian!T(val, endianness), key);
     }
 
     /**
@@ -246,7 +246,7 @@ public:
             return;
 
         scope(exit) step!T;
-        *cast(T*)(&data[position]) = btencryp!T(makeEndian!T(val, endianness), key);
+        *cast(T*)(&data[position]) = bse_encrypt!T(makeEndian!T(val, endianness), key);
     }
 
     /**
@@ -261,7 +261,7 @@ public:
         if (data.length <= position)
             return;
 
-        *cast(T*)(&data[position]) = btencryp!T(makeEndian!T(val, endianness), key);
+        *cast(T*)(&data[position]) = bse_encrypt!T(makeEndian!T(val, endianness), key);
     }
 
     /**

@@ -93,8 +93,7 @@ T bse_decrypt(int BITS, T)(T val, string key)
     return val;
 }
 
-// TODO: fix severe plaintext weakness
-private void bse256_encrypt(ubyte* ptr, int length, string key)
+extern (C) export void bse256_encrypt(ubyte* ptr, int length, string key)
 {
     if (key.length != 32)
         return;
@@ -129,12 +128,15 @@ private void bse256_encrypt(ubyte* ptr, int length, string key)
             {
                 ulong2* vptr = cast(ulong2*)(ptr + (i * 16));
             
-                ulong ri = ~i ^ r;
+                ulong ri = ~i;
                 *vptr ^= (c << i) & ri;  
                 *vptr ^= (d << i) & ri; 
                 *vptr -= ri; 
                 *vptr ^= (a << i) & ri; 
                 *vptr ^= (b << i) & ri; 
+
+                if (i != 0)
+                    *vptr ^= *(vptr - 1);
             }
             break;
         case 8:
@@ -142,12 +144,14 @@ private void bse256_encrypt(ubyte* ptr, int length, string key)
             {
                 ulong* vptr = cast(ulong*)(ptr + (i * 8));
             
-                ulong ri = ~i ^ r;
+                ulong ri = ~i;
                 *vptr ^= (c << i) & ri;  
                 *vptr ^= (d << i) & ri; 
-                *vptr -= ri; 
                 *vptr ^= (a << i) & ri; 
                 *vptr ^= (b << i) & ri; 
+
+                if (i != 0)
+                    *vptr ^= *(vptr - 1);
             }
             break;
         case 4:
@@ -155,12 +159,15 @@ private void bse256_encrypt(ubyte* ptr, int length, string key)
             {
                 uint* vptr = cast(uint*)(ptr + (i * 4));
                 
-                ulong ri = ~i ^ r;
+                ulong ri = ~i;
                 *vptr ^= (c << i) & ri;  
                 *vptr ^= (d << i) & ri; 
                 *vptr -= ri; 
                 *vptr ^= (a << i) & ri; 
                 *vptr ^= (b << i) & ri; 
+
+                if (i != 0)
+                    *vptr ^= *(vptr - 1);
             }
             break;
         case 2:
@@ -168,23 +175,29 @@ private void bse256_encrypt(ubyte* ptr, int length, string key)
             {
                 ushort* vptr = cast(ushort*)(ptr + (i * 2));
                 
-                ulong ri = ~i ^ r;
+                ulong ri = ~i;
                 *vptr ^= (c << i) & ri;  
                 *vptr ^= (d << i) & ri; 
                 *vptr -= ri; 
                 *vptr ^= (a << i) & ri; 
                 *vptr ^= (b << i) & ri; 
+
+                if (i != 0)
+                    *vptr ^= *(vptr - 1);
             }
             break;
         default:
             foreach (i, _; parallel(ptr[0..length]))
             {
-                ulong ri = ~i ^ r;
+                ulong ri = ~i;
                 ptr[i] ^= (c << i) & ri;  
                 ptr[i] ^= (d << i) & ri; 
                 ptr[i] -= ri; 
                 ptr[i] ^= (a << i) & ri; 
                 ptr[i] ^= (b << i) & ri; 
+
+                if (i != 0)
+                    ptr[i] ^= ptr[i - 1];
             }
             break;
     } 
@@ -198,7 +211,7 @@ private void bse256_encrypt(ubyte* ptr, int length, string key)
     }
 }
 
-private void bse256_decrypt(ubyte* ptr, int length, string key)
+extern (C) export void bse256_decrypt(ubyte* ptr, int length, string key)
 {
     if (key.length != 32)
         return;
@@ -216,15 +229,18 @@ private void bse256_decrypt(ubyte* ptr, int length, string key)
         ptr[ii] = b0;
     }
 
-    foreach (r; 0..4)
+    foreach_reverse (r; 0..4)
     switch (length % 16)
     {
         case 0:
-            foreach_reverse (i; 0..(length / 16))
+            foreach_reverse (i; 0..length)
             {
                 ulong2* vptr = cast(ulong2*)(ptr + (i * 16));
             
-                ulong ri = ~i ^ r;
+                if (i != 0)
+                    *vptr ^= *(vptr - 1);
+                    
+                ulong ri = ~i;
                 *vptr ^= (b << i) & ri;  
                 *vptr ^= (a << i) & ri; 
                 *vptr += ri; 
@@ -233,11 +249,14 @@ private void bse256_decrypt(ubyte* ptr, int length, string key)
             }
             break;
         case 8:
-            foreach_reverse (i; 0..(length / 8))
+            foreach_reverse (i; 0..length)
             {
                 ulong* vptr = cast(ulong*)(ptr + (i * 8));
             
-                ulong ri = ~i ^ r;
+                if (i != 0)
+                    *vptr ^= *(vptr - 1);
+
+                ulong ri = ~i;
                 *vptr ^= (b << i) & ri;  
                 *vptr ^= (a << i) & ri; 
                 *vptr += ri; 
@@ -246,11 +265,14 @@ private void bse256_decrypt(ubyte* ptr, int length, string key)
             }
             break;
         case 4:
-            foreach_reverse (i; 0..(length / 4))
+            foreach_reverse (i; 0..length)
             {
                 uint* vptr = cast(uint*)(ptr + (i * 4));
                 
-                ulong ri = ~i ^ r;
+                if (i != 0)
+                    *vptr ^= *(vptr - 1);
+                    
+                ulong ri = ~i;
                 *vptr ^= (b << i) & ri;  
                 *vptr ^= (a << i) & ri; 
                 *vptr += ri; 
@@ -259,30 +281,36 @@ private void bse256_decrypt(ubyte* ptr, int length, string key)
             }
             break;
         case 2:
-            foreach_reverse (i; 0..(length / 2))
+            foreach_reverse (i; 0..length)
             {
                 ushort* vptr = cast(ushort*)(ptr + (i * 2));
                 
-                ulong ri = ~i ^ r;
+                if (i != 0)
+                    *vptr ^= *(vptr - 1);
+                    
+                ulong ri = ~i;
                 *vptr ^= (b << i) & ri;  
                 *vptr ^= (a << i) & ri; 
                 *vptr += ri; 
-                *vptr ^= (d << i); 
+                *vptr ^= (d << i) & ri; 
                 *vptr ^= (c << i) & ri; 
             }
             break;
         default:
             foreach_reverse (i; 0..length)
             {
-                ulong ri = ~i ^ r;
+                if (i != 0)
+                    ptr[i] ^= ptr[i - 1];
+
+                ulong ri = ~i;
                 ptr[i] ^= (b << i) & ri;  
                 ptr[i] ^= (a << i) & ri; 
                 ptr[i] += ri; 
                 ptr[i] ^= (d << i) & ri; 
-                ptr[i] ^= (c << i) & ri; 
+                ptr[i] ^= (c << i) & ri;
             }
             break;
-    } 
+    }
 
     foreach_reverse (i; 0..length)
     {

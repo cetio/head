@@ -93,6 +93,7 @@ T bse_decrypt(int BITS, T)(T val, string key)
     return val;
 }
 
+// TODO: fix severe plaintext weakness
 private void bse256_encrypt(ubyte* ptr, int length, string key)
 {
     if (key.length != 32)
@@ -128,7 +129,7 @@ private void bse256_encrypt(ubyte* ptr, int length, string key)
             {
                 ulong2* vptr = cast(ulong2*)(ptr + (i * 16));
             
-                ulong ri = ~i;
+                ulong ri = ~i ^ r;
                 *vptr ^= (c << i) & ri;  
                 *vptr ^= (d << i) & ri; 
                 *vptr -= ri; 
@@ -141,7 +142,7 @@ private void bse256_encrypt(ubyte* ptr, int length, string key)
             {
                 ulong* vptr = cast(ulong*)(ptr + (i * 8));
             
-                ulong ri = ~i;
+                ulong ri = ~i ^ r;
                 *vptr ^= (c << i) & ri;  
                 *vptr ^= (d << i) & ri; 
                 *vptr -= ri; 
@@ -154,7 +155,7 @@ private void bse256_encrypt(ubyte* ptr, int length, string key)
             {
                 uint* vptr = cast(uint*)(ptr + (i * 4));
                 
-                ulong ri = ~i;
+                ulong ri = ~i ^ r;
                 *vptr ^= (c << i) & ri;  
                 *vptr ^= (d << i) & ri; 
                 *vptr -= ri; 
@@ -167,7 +168,7 @@ private void bse256_encrypt(ubyte* ptr, int length, string key)
             {
                 ushort* vptr = cast(ushort*)(ptr + (i * 2));
                 
-                ulong ri = ~i;
+                ulong ri = ~i ^ r;
                 *vptr ^= (c << i) & ri;  
                 *vptr ^= (d << i) & ri; 
                 *vptr -= ri; 
@@ -178,7 +179,7 @@ private void bse256_encrypt(ubyte* ptr, int length, string key)
         default:
             foreach (i, _; parallel(ptr[0..length]))
             {
-                ulong ri = ~i;
+                ulong ri = ~i ^ r;
                 ptr[i] ^= (c << i) & ri;  
                 ptr[i] ^= (d << i) & ri; 
                 ptr[i] -= ri; 
@@ -223,7 +224,7 @@ private void bse256_decrypt(ubyte* ptr, int length, string key)
             {
                 ulong2* vptr = cast(ulong2*)(ptr + (i * 16));
             
-                ulong ri = ~i;
+                ulong ri = ~i ^ r;
                 *vptr ^= (b << i) & ri;  
                 *vptr ^= (a << i) & ri; 
                 *vptr += ri; 
@@ -236,7 +237,7 @@ private void bse256_decrypt(ubyte* ptr, int length, string key)
             {
                 ulong* vptr = cast(ulong*)(ptr + (i * 8));
             
-                ulong ri = ~i;
+                ulong ri = ~i ^ r;
                 *vptr ^= (b << i) & ri;  
                 *vptr ^= (a << i) & ri; 
                 *vptr += ri; 
@@ -249,7 +250,7 @@ private void bse256_decrypt(ubyte* ptr, int length, string key)
             {
                 uint* vptr = cast(uint*)(ptr + (i * 4));
                 
-                ulong ri = ~i;
+                ulong ri = ~i ^ r;
                 *vptr ^= (b << i) & ri;  
                 *vptr ^= (a << i) & ri; 
                 *vptr += ri; 
@@ -262,18 +263,18 @@ private void bse256_decrypt(ubyte* ptr, int length, string key)
             {
                 ushort* vptr = cast(ushort*)(ptr + (i * 2));
                 
-                ulong ri = ~i;
+                ulong ri = ~i ^ r;
                 *vptr ^= (b << i) & ri;  
                 *vptr ^= (a << i) & ri; 
                 *vptr += ri; 
-                *vptr ^= (d << i) & ri; 
+                *vptr ^= (d << i); 
                 *vptr ^= (c << i) & ri; 
             }
             break;
         default:
             foreach_reverse (i; 0..length)
             {
-                ulong ri = ~i;
+                ulong ri = ~i ^ r;
                 ptr[i] ^= (b << i) & ri;  
                 ptr[i] ^= (a << i) & ri; 
                 ptr[i] += ri; 

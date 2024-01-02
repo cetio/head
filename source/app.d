@@ -12,7 +12,7 @@ void main()
 	Stream stream = new Stream(r"C:\Users\stake\Downloads\supersecret.txt");
     writeln(stream.data.length / 1024 / 1024, "MB");
     auto start = Clock.currTime;
-    stream.decrypt("yKxPczCgvMp94Bn3NsVf28m6rjqwUD5t");
+    stream.encrypt("yKxPczCgvMp94Bn3NsVf28m6rjqwUD5t");
     stream.flush();
     auto end = Clock.currTime;
     writeln("BSE256 ", (end - start).split!("msecs").msecs, "ms");

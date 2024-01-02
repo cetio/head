@@ -3,6 +3,15 @@ module godwit.bse;
 import std.traits;
 import std.parallelism;
 import core.simd;
+import std.conv;
+
+private template ElementType(T) 
+{
+    static if (is(T == U[], U))
+        alias ElementType = ElementType!U;
+    else
+        alias ElementType = T;
+}
 
 public:
 static:
@@ -52,13 +61,42 @@ static:
     }
 }*/
 
-void bse256_encrypt(ubyte* ptr, int length, string key)
+T bse_encrypt(int BITS, T)(T val, string key)
+    if (!isArray!T)
+{
+    static assert(BITS == 256, "Unsupported key bitness!");
+    bse256_encrypt(cast(ubyte*)&val, T.sizeof, key);
+    return val;
+}
+
+T bse_decrypt(int BITS, T)(T val, string key)
+    if (!isArray!T)
+{
+    static assert(BITS == 256, "Unsupported key bitness!");
+    bse256_decrypt(cast(ubyte*)&val, T.sizeof, key);
+    return val;
+}
+
+T bse_encrypt(int BITS, T)(T val, string key)
+    if (isArray!T)
+{
+    static assert(BITS == 256, "Unsupported key bitness!");
+    bse256_encrypt(cast(ubyte*)&val[0], cast(int)(ElementType!T.sizeof * val.length), key);
+    return val;
+}
+
+T bse_decrypt(int BITS, T)(T val, string key)
+    if (isArray!T)
+{
+    static assert(BITS == 256, "Unsupported key bitness!");
+    bse256_decrypt(cast(ubyte*)&val[0], cast(int)(ElementType!T.sizeof * val.length), key);
+    return val;
+}
+
+private void bse256_encrypt(ubyte* ptr, int length, string key)
 {
     if (key.length != 32)
-    {
-        import std.conv;
-        throw new Exception("Key is "~(key.length * 8).to!string~" bits, expected 256!");
-    }
+        return;
 
     // Steps:
     // Create minikeys
@@ -159,13 +197,10 @@ void bse256_encrypt(ubyte* ptr, int length, string key)
     }
 }
 
-void bse256_decrypt(ubyte* ptr, int length, string key)
+private void bse256_decrypt(ubyte* ptr, int length, string key)
 {
     if (key.length != 32)
-    {
-        import std.conv;
-        throw new Exception("Key is "~(key.length * 8).to!string~" bits, expected 256!");
-    }
+        return;
 
     ulong a = (cast(ulong*)&key[0])[0];
     ulong b = (cast(ulong*)&key[0])[1];
@@ -437,31 +472,3 @@ void bse128_decrypt(ubyte* ptr, int length, string key)
         ptr[ii] = b0;
     }
 } */
-
-T bse_encrypt(T)(T val, string key)
-    if (!isArray!T)
-{
-    bse256_encrypt(cast(ubyte*)&val, T.sizeof, key);
-    return val;
-}
-
-T bse_decrypt(T)(T val, string key)
-    if (!isArray!T)
-{
-    bse256_decrypt(cast(ubyte*)&val, T.sizeof, key);
-    return val;
-}
-
-T bse_encrypt(T)(T val, string key)
-    if (isArray!T)
-{
-    bse256_encrypt(cast(ubyte*)&val[0], cast(int)(T.sizeof * val.length), key);
-    return val;
-}
-
-T bse_decrypt(T)(T val, string key)
-    if (isArray!T)
-{
-    bse256_decrypt(cast(ubyte*)&val[0], cast(int)(T.sizeof * val.length), key);
-    return val;
-}

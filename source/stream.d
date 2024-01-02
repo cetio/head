@@ -53,7 +53,7 @@ private static @nogc T makeEndian(T)(T val, Endianness endianness)
     return val;
 }
 
-template ElementType(T) 
+private template ElementType(T) 
 {
     static if (is(T == U[], U))
         alias ElementType = ElementType!U;
@@ -103,12 +103,14 @@ public:
 
     void encrypt(string key)
     {
-        bse256_encrypt(cast(ubyte*)&data[0], cast(int)data.length, key);
+        import std.stdio;
+        writeln(cast(int)(data.length));
+        data = bse_encrypt!256(data, key);
     }
 
     void decrypt(string key)
     {
-        bse256_decrypt(cast(ubyte*)&data[0], cast(int)data.length, key);
+        data = bse_decrypt!256(data, key);
     }
 
     /**
@@ -176,7 +178,7 @@ public:
 
         scope(exit) step!T;
         T val = *cast(T*)(&data[position]);
-        return bse_decrypt!T(makeEndian!T(val, endianness), key);
+        return bse_decrypt!256(makeEndian!T(val, endianness), key);
     }
 
     /**
@@ -195,7 +197,7 @@ public:
             return T.init;
 
         T val = *cast(T*)(&data[position]);
-        return bse_decrypt!T(makeEndian!T(val, endianness), key);
+        return bse_decrypt!256(makeEndian!T(val, endianness), key);
     }
 
     /**
@@ -246,7 +248,7 @@ public:
             return;
 
         scope(exit) step!T;
-        *cast(T*)(&data[position]) = bse_encrypt!T(makeEndian!T(val, endianness), key);
+        *cast(T*)(&data[position]) = bse_encrypt!256(makeEndian!T(val, endianness), key);
     }
 
     /**
@@ -261,7 +263,7 @@ public:
         if (data.length <= position)
             return;
 
-        *cast(T*)(&data[position]) = bse_encrypt!T(makeEndian!T(val, endianness), key);
+        *cast(T*)(&data[position]) = bse_encrypt!256(makeEndian!T(val, endianness), key);
     }
 
     /**

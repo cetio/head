@@ -219,7 +219,7 @@ extern (C) export void bse256_encrypt(ubyte* ptr, int len, string key)
     // Use blocks?
     foreach (i; 0..len)
     {
-        int ii = cast(int)(((a << i) & (b << i)) % len);
+        int ii = cast(int)(((c << i) & (d << i)) % len);
         ubyte b0 = ptr[i];
         ptr[i] = ptr[ii];
         ptr[ii] = b0;
@@ -227,7 +227,7 @@ extern (C) export void bse256_encrypt(ubyte* ptr, int len, string key)
 
     foreach (r; 0..4)
     {
-        foreach (i, _; parallel(ptr[0..(len / 16)]))
+        foreach (i, _; parallel(ptr[0..(rlen / 16)]))
         {
             ulong2* vptr = cast(ulong2*)(ptr + (i * 16));
             ulong ri = ~i;
@@ -236,13 +236,13 @@ extern (C) export void bse256_encrypt(ubyte* ptr, int len, string key)
             *vptr ^= (a << i) & ri; 
             *vptr ^= (b << i) & ri; 
         }
-        foreach (i; 0..(len / 16))
+        foreach (i; 0..(rlen / 16))
         {
             ulong2* vptr = cast(ulong2*)(ptr + (i * 16));
             if (i != 0)
                 *vptr ^= *(vptr - 1);
         }
-
+    
         foreach (i, _; parallel(ptr[rlen..len]))
         {
             ulong ri = ~i;
@@ -253,7 +253,7 @@ extern (C) export void bse256_encrypt(ubyte* ptr, int len, string key)
         }
         foreach (i; rlen..len)
         {
-            if (rlen != 0 || i != 0)
+            if (i != 0)
                 ptr[i] ^= ptr[i - 1];
         }
     }
@@ -313,34 +313,27 @@ extern (C) export void bse256_decrypt(ubyte* ptr, int len, string key)
 
     foreach_reverse (r; 0..4)
     {
-        foreach_reverse (i; rlen..len)
-        {
-            if (rlen != 0 || i != 0)
-                ptr[i] ^= ptr[i - 1];
-        }
-        foreach_reverse (i; rlen..len)
-        {
-            ulong ri = ~i;
-            ptr[i] ^= (b << i) & ri; 
-            ptr[i] ^= (a << i) & ri; 
-            ptr[i] ^= (d << i) & ri;
-            ptr[i] ^= (c << i) & ri;  
-        }
-        
-        foreach_reverse (i; 0..(len / 16))
+        foreach_reverse (i; 0..(rlen / 16))
         {
             ulong2* vptr = cast(ulong2*)(ptr + (i * 16));
             if (i != 0)
                 *vptr ^= *(vptr - 1);
-        }
-        foreach_reverse (i; 0..(len / 16))
-        {
-            ulong2* vptr = cast(ulong2*)(ptr + (i * 16));
             ulong ri = ~i;
             *vptr ^= (b << i) & ri; 
             *vptr ^= (a << i) & ri; 
             *vptr ^= (d << i) & ri;
             *vptr ^= (c << i) & ri;  
+        }
+
+        foreach_reverse (i; rlen..len)
+        {
+            if (i != 0)
+                ptr[i] ^= ptr[i - 1];
+            ulong ri = ~i;
+            ptr[i] ^= (b << i) & ri;  
+            ptr[i] ^= (a << i) & ri; 
+            ptr[i] ^= (d << i) & ri; 
+            ptr[i] ^= (c << i) & ri;  
         }
     }
 
